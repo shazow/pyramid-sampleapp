@@ -18,8 +18,12 @@ def _setup_models(settings):
     engine = engine_from_config(settings, 'sqlalchemy.')
     model.init(engine)
 
+    # Set password hash maxtime for User object.
+    model.User.PASSWORD_MAXTIME = float(settings.get('password.hash_maxtime', 0.0001))
+
 
 def _setup_routes(config):
+    config.add_route('api', '/api', views.api.index)
     config.add_route('index', '/', views.index.index)
     config.add_route('account.create', '/account/create', views.account.create)
 

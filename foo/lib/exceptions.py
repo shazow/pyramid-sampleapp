@@ -12,6 +12,10 @@ class APIError(APIException):
     pass
 
 
+class APIControllerError(APIError):
+    pass
+
+
 class LoginRequired(APIException):
     def __init__(self, next=None):
         self.message = 'Login required.'

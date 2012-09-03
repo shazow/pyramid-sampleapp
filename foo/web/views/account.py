@@ -1,25 +1,32 @@
 from foo import api
+from .api import _controller as api_controller
+from foo.lib.exceptions import APIControllerError
 
 from pyramid.httpexceptions import HTTPFound
 from pyramid.renderers import render_to_response
 
 
-def _create_account(request):
-    # TODO: This should be in an api controller.
-    pass
-
-
 def create(request):
-    redirect_to = request.params.get('next')
+    redirect_to = request.params.get('next') or '/'
     user_id = api.account.get_user_id(request)
     if user_id:
-        raise HTTPFound(location=redirect_to)
+        return HTTPFound(location=redirect_to)
 
+    context = {'next': redirect_to, 'request': request}
     method = request.params.get('method')
     if not method:
-        return render_to_response('account/create.mako', {'next': redirect_to, 'request': request}, request)
+        # Default behaviour, no form submitted.
+        return render_to_response('account/create.mako', context , request)
 
-    fn = {
-        'account.create': _create_account
-    }[method]
-    return fn(request)
+    try:
+        # Form submitted, delegate the request to the API controller.
+        r = api_controller(request)
+    except APIControllerError, e:
+        # API Controller rejected the request, re-render the form with the error.
+        request.session.flash(e.message)
+        context.update(request.params)
+        return render_to_response('account/create.mako', context, request)
+
+    # Submission processed successfully, redirect to the next page.
+    request.session.flash('Welcome.')
+    return HTTPFound(location=redirect_to)
