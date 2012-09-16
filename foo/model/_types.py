@@ -1,23 +1,4 @@
-import datetime
-import json
-import time
-
 from sqlalchemy import types
-
-from .meta import Model
-
-
-class SchemaEncoder(json.JSONEncoder):
-    """Encoder for converting Model objects into JSON."""
-
-    # TODO: Add support for hidden properties.
-
-    def default(self, obj):
-        if isinstance(obj, datetime.date):
-            return time.strftime('%Y-%m-%dT%H:%M:%SZ', obj.utctimetuple())
-        elif isinstance(obj, Model):
-            return obj.__json__()
-        return json.JSONEncoder.default(self, obj)
 
 
 class Enum(types.TypeDecorator):

@@ -1,9 +1,13 @@
 """SQLAlchemy Metadata and Session object"""
+import datetime
+import json
+import time
+
 from sqlalchemy import MetaData
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 
-__all__ = ['Session', 'metadata', 'Model']
+__all__ = ['Session', 'metadata', 'Model', 'SchemaEncoder']
 
 
 # Remove expire_on_commit=False if autorefreshing of committed objects is
@@ -17,6 +21,11 @@ metadata = MetaData()
 from sqlalchemy.ext.declarative import declarative_base
 
 class _Base(object):
+    """ Metaclass for the Model base class."""
+    # Only include these attributes when serializing using __json__. If
+    # relationships should be serialized, then they need to be whitelisted.
+    __json_whitelist__ = None
+
     @classmethod
     def get(cls, id):
         return Session.query(cls).get(id)
@@ -61,5 +70,22 @@ class _Base(object):
         values = ', '.join("%s=%r" % (n, getattr(self, n)) for n in self.__table__.c.keys())
         return "%s(%s)" % (self.__class__.__name__, values)
 
+    def __json__(self):
+        if self.__json_whitelist__ is not None:
+            return dict((k, getattr(self, k)) for k in self.__json_whitelist__)
+
+        return dict((k, getattr(self, k)) for k in self.__table__.c.keys())
+
 
 Model = declarative_base(metadata=metadata, cls=_Base)
+
+
+class SchemaEncoder(json.JSONEncoder):
+    """Encoder for converting Model objects into JSON."""
+
+    def default(self, obj):
+        if isinstance(obj, datetime.date):
+            return time.strftime('%Y-%m-%dT%H:%M:%SZ', obj.utctimetuple())
+        elif isinstance(obj, Model):
+            return obj.__json__()
+        return json.JSONEncoder.default(self, obj)

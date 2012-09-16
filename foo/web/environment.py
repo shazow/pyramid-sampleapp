@@ -25,7 +25,8 @@ def _setup_models(settings):
 def _setup_routes(config):
     config.add_route('api', '/api', views.api.index)
     config.add_route('index', '/', views.index.index)
-    config.add_route('account.create', '/account/create', views.account.create)
+
+    config.add_handler('account', '/account/{action}', views.account.AccountController)
 
 
 def _template_globals_factory(system):
@@ -36,6 +37,9 @@ def setup(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
     """
     config = Configurator(settings=settings)
+
+    # Add support for handler-based routes
+    config.include('pyramid_handlers')
 
     # Globals for templates
     config.set_renderer_globals_factory(_template_globals_factory)

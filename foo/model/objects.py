@@ -1,8 +1,7 @@
 from .meta import Model
 from . import _types
 
-from foo.lib.helpers import random_string
-
+from unstdlib import random_string
 from sqlalchemy import orm, types, Index
 from sqlalchemy import Column, ForeignKey
 
@@ -20,6 +19,7 @@ log = logging.getLogger(__name__)
 
 class User(Model):
     __tablename__ = 'user'
+    __json_whitelist__ = ['id', 'email']
 
     id = Column(types.Integer, primary_key=True)
     time_created = Column(types.DateTime, default=datetime.now, nullable=False)
@@ -63,7 +63,6 @@ class User(Model):
             Must be larger than the time used to encrypt the original password.
         """
         try:
-            # FIXME: Is there a better way than encode('utf8')-ing everything?
             scrypt.decrypt(self.password_hash, password.encode('utf8'), maxtime=maxtime)
             return True
         except scrypt.error:

@@ -25,7 +25,7 @@ class TestApp(TestCase):
 class TestModel(TestApp):
     def setUp(self):
         super(TestModel, self).setUp()
-        model.metadata.create_all(bind=model.Session.bind)
+        model.create_all()
 
 
     def tearDown(self):
@@ -49,3 +49,5 @@ class TestWeb(TestModel):
 
         from webtest import TestApp
         self.app = TestApp(self.wsgi_app)
+        self.session = testing.DummySession()
+        self.csrf_token = settings['session.constant_csrf_token']

@@ -3,24 +3,34 @@ import json
 from pyramid.response import Response
 from unstdlib import get_many
 
-from foo.lib.exceptions import APIControllerError
-from foo.model._types import SchemaEncoder
+from foo.lib.exceptions import APIError, APIControllerError, LoginRequired
+from foo.model.meta import SchemaEncoder
 from foo import api
+from foo import model
 
 
 API_METHOD_MAP = {}
 
-def expose_api(name):
+def expose_api(name, check_csrf=True, check_referer=True):
     """ Decorator helper for registering an API method. """
     # TODO: Add csrf checking option?
     def decorator(fn):
         API_METHOD_MAP[name] = fn
+        fn.check_csrf = check_csrf
+        fn.check_referer = check_referer
         return fn
     return decorator
 
 
-def _controller(request):
+def _controller(request, method_whitelist=None):
     """ Performs the internal exposed API routing and error handling.
+
+    :param request:
+        Request object.
+
+    :param method_whitelist:
+        If provided, limits the methods which we're allowed to process in this
+        call.
     """
     try:
         method = request.params['method']
@@ -31,9 +41,11 @@ def _controller(request):
     if not fn:
         raise APIControllerError("Method does not exist: %s" % method)
 
-    # Simple check for XSS
-    if request.referer and not request.referer.startswith(request.application_url):
+    if fn.check_referer and request.referer and not request.referer.startswith(request.application_url):
         raise APIControllerError("Bad referer: %s" % request.referer)
+
+    if fn.check_csrf and request.params.get('csrf_token') != request.session.get_csrf_token():
+        raise APIControllerError("Invalid csrf_token value: %s" % request.params.get('csrf_token'))
 
     try:
         return fn(request)
@@ -73,11 +85,30 @@ def index(request):
 
 # Exposed APIs:
 
+@expose_api('ping')
+def ping(request):
+    return {'ping': 'pong'}
+
+
 @expose_api('account.create')
 def account_create(request):
     email, password, password_confirm = get_many(request.params, required=['email', 'password', 'password_confirm'])
 
     if password != password_confirm:
-        raise APIControllerError("Password confirmation doesn't match.")
+        raise APIControllerError('Password confirmation does not match.')
 
-    api.account.create(email=email, password=password)
+    u = model.User.get_by(email=email)
+    if u:
+        raise LoginRequired('Email address already exists. Try logging in?')
+
+    return {'user': api.account.create(email=email, password=password)}
+
+
+@expose_api('account.login')
+def account_login(request):
+    try:
+        u = api.account.login_user(request)
+    except APIError:
+        raise APIControllerError('Invalid login.')
+
+    return {'user': u}
