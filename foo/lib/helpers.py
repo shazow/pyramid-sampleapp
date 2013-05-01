@@ -17,20 +17,23 @@ The template globals (``h`` et al) are set in
 ``foo/web/environment.py``.
 """
 
-import time
-from webhelpers.html import tags
+
+from unstdlib import html
+from pyramid.asset import abspath_from_asset_spec  # TODO: Adopt this into unstdlib?
 
 
-_server_time_launched = str(int(time.time()))
+def stylesheet_link(request, asset_spec):
+    real_path = abspath_from_asset_spec(asset_spec)
+    url_path = request.static_path(asset_spec)
+    return html.stylesheet_link(url_path, real_path, cache_bust='md5')
 
 
-# Handy wrappers for appending a timestamp to include urls:
+def javascript_link(request, asset_spec):
+    real_path = abspath_from_asset_spec(asset_spec)
+    url_path = request.static_path(asset_spec)
+    return html.javascript_link(url_path, real_path, cache_bust='md5')
 
-def url_append_timestamp(url):
-    return url + '?' + _server_time_launched
-
-def stylesheet_link(*urls, **attrs):
-    return tags.stylesheet_link(*(url_append_timestamp(u) for u in urls), **attrs)
-
-def javascript_link(*urls, **attrs):
-    return tags.javascript_link(*(url_append_timestamp(u) for u in urls), **attrs)
+def text_if(cond, text):
+    if cond:
+        return html.literal(text)
+    return ''
