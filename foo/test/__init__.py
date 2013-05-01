@@ -1,12 +1,13 @@
+import json
 import os
 import paste.deploy
 
 from unittest import TestCase
-from pyramid import testing
 
 from foo import model
 from foo import web
 
+_DEFAULT = object()
 
 ENV_TEST_INI = os.environ.get('TEST_INI', 'test.ini')
 
@@ -19,7 +20,13 @@ settings = paste.deploy.appconfig('config:' + TEST_INI)
 
 class TestApp(TestCase):
     def setUp(self):
-        self.wsgi_app = web.environment.setup({}, **settings)
+        super(TestApp, self).setUp()
+
+        self.config = web.environment.setup_testing(**settings)
+        self.wsgi_app = self.config.make_wsgi_app()
+
+    def tearDown(self):
+        super(TestCase, self).tearDown()
 
 
 class TestModel(TestApp):
@@ -32,22 +39,29 @@ class TestModel(TestApp):
         model.Session.remove()
 
 
-class TestUnit(TestModel):
-    def setUp(self):
-        super(TestUnit, self).setUp()
-        self.config = testing.setUp()
-
-
-    def tearDown(self):
-        super(TestUnit, self).tearDown()
-        testing.tearDown()
-
-
 class TestWeb(TestModel):
     def setUp(self):
         super(TestWeb, self).setUp()
 
         from webtest import TestApp
         self.app = TestApp(self.wsgi_app)
-        self.session = testing.DummySession()
         self.csrf_token = settings['session.constant_csrf_token']
+        self.request = web.environment.Request.blank('/')
+
+    def call_api(self, method, format='json', csrf_token=_DEFAULT, _status=None, _extra_params=None, **params):
+        "Call an API method exposed by @expose_api."
+        if csrf_token is _DEFAULT:
+            csrf_token = self.csrf_token
+
+        p = {
+            'method': method,
+            'csrf_token': csrf_token,
+            'format': format,
+        }
+        p.update(params)
+        if _extra_params:
+            p.update(_extra_params)
+
+        r = self.app.post('/api', params=p, status=_status)
+
+        return json.loads(r.body)
