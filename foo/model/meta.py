@@ -60,6 +60,10 @@ class _Base(object):
     def all(cls):
         return Session.query(cls).all()
 
+    @classmethod
+    def count(cls):
+        return Session.query(cls).count()
+
     def delete(self):
         Session.delete(self)
 
