@@ -53,7 +53,7 @@ class TestAccount(test.TestWeb):
             'csrf_token': self.csrf_token,
         }
 
-        r = self.app.post('/account/create', params=good_params, status=302)
+        r = self.app.post('/account/create', params=good_params, status=303)
         self.assertEqual(1, Session.query(model.User).count())
 
         u = model.User.get(1)
@@ -94,4 +94,4 @@ class TestAccount(test.TestWeb):
 
         # Success
         r = self.app.post('/account/login', params=params)
-        self.assertEqual(r.status_int, 302, r.body)
+        self.assertEqual(r.status_int, 303, r.body)

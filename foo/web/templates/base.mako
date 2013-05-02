@@ -5,7 +5,7 @@
 
     <title>foo</title>
 
-    ${h.stylesheet_link(request, 'foo.web:static/css/screen.css')}
+    ${h.stylesheet_link(request, 'foo.web:static/css/base.css')}
 
     <%block name="extra_head">
     </%block>

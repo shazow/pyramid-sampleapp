@@ -1,6 +1,5 @@
 from .meta import Session, metadata
-from .objects.auth import *
-from .objects.intro import *
+from .objects import *
 
 
 def init(engine):

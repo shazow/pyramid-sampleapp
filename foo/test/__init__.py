@@ -26,7 +26,7 @@ class TestApp(TestCase):
         self.wsgi_app = self.config.make_wsgi_app()
 
     def tearDown(self):
-        super(TestCase, self).tearDown()
+        super(TestApp, self).tearDown()
 
 
 class TestModel(TestApp):
