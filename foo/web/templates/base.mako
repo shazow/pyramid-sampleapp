@@ -5,7 +5,7 @@
 
     <title>foo</title>
 
-    ${h.stylesheet_link('/static/css/base.css')}
+    ${h.stylesheet_link(request, 'foo.web:static/css/screen.css')}
 
     <%block name="extra_head">
     </%block>
@@ -46,7 +46,7 @@ ${next.body()}
     </div>
 </footer>
 
-<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7/jquery.min.js"></script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9/jquery.min.js"></script>
 
 <%block name="tail" />
 
