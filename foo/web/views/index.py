@@ -1,5 +1,4 @@
-from pyramid.renderers import render_to_response
-
+from foo.web.environment import render_to_response
 from foo import api
 
 

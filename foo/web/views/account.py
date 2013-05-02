@@ -1,53 +1,64 @@
-from foo import api
-from foo.lib.exceptions import APIControllerError
+from unstdlib import get_many
 
+from foo import api
+from foo.lib.exceptions import APIError, APIControllerError
+from foo.web.environment import httpexceptions
+
+from .api import expose_api, handle_api
 from .base import Controller
-from .api import _controller as api_controller
+
+
+@expose_api('account.create')
+def account_create(request):
+    if request.features.get('invite_required'):
+        raise APIControllerError("Method not permitted: %s" % account_create.exposed_name)
+
+    email, password, password_confirm, autologin = get_many(request.params, required=['email'], optional=['password', 'password_confirm', 'autologin'])
+
+    if password != password_confirm:
+        raise APIControllerError('Password confirmation does not match.')
+
+    if password and len(password) < 3:
+        raise APIControllerError('Please choose a longer password.')
+
+    user = api.account.create(email=email, password=password)
+    if autologin:
+        api.account.login_user_id(request, user.id)
+
+    return {'user': user}
+
+
+@expose_api('account.login')
+def account_login(request):
+    try:
+        u = api.account.login_user(request)
+    except APIError:
+        raise APIControllerError('Invalid login.')
+
+    return {'user': u}
 
 
 class AccountController(Controller):
 
+    @handle_api # Handle api requests posted to this view (such as account.create in this case)
     def create(self):
+        if self.request.features.get('invite_required'):
+            raise httpexceptions.HTTPNotFound()
+
+        self.title = 'Create an account'
+
         user_id = api.account.get_user_id(self.request)
         if user_id:
             return self._redirect(location=self.next)
 
-        method = self.request.params.get('method')
-        if not method:
-            # Default behaviour, no form submitted.
-            return self._render('account/create.mako')
+        return self._render('account/create.mako')
 
-        try:
-            # Form submitted, delegate the self.request to the API controller.
-            r = api_controller(self.request)
-        except APIControllerError, e:
-            # API Controller rejected the self.request, re-render the form with the error.
-            self.session.flash(e.message)
-            return self._render('account/create.mako')
-
-        # Submission processed successfully, login and redirect to the next page.
-        api.account.login_user_id(self.request, r['user'].id)
-        self.session.flash('Welcome.')
-
-        return self._redirect(location=self.next)
-
-
+    @handle_api
     def login(self):
+        self.title = 'Sign in'
+
         user_id = api.account.get_user_id(self.request)
         if user_id:
             return self._redirect(location=self.next)
 
-        method = self.request.params.get('method')
-        if not method:
-            # Default behaviour, no form submitted.
-            return self._render('account/login.mako')
-
-        try:
-            # Form submitted, delegate the request to the API controller.
-            r = api_controller(self.request)
-        except APIControllerError, e:
-            # API Controller rejected the request, re-render the form with the error.
-            self.session.flash(e.message)
-            return self._render('account/login.mako')
-
-        return self._redirect(location=self.next)
+        return self._render('account/login.mako')
