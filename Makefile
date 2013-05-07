@@ -3,7 +3,7 @@ REQUIREMENTS_OUT=requirements.txt.log
 SETUP_OUT=*.egg-info
 
 
-all: setup requirements model_upgrade
+all: setup requirements
 
 requirements: $(REQUIREMENTS_OUT)
 
